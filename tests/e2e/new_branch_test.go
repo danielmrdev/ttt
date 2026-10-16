@@ -1,19 +1,35 @@
 package e2e
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/eugenioenko/ttt/internal/git"
 	"github.com/gdamore/tcell/v3"
 )
 
-func TestNewBranchCommandCreatesBranch(t *testing.T) {
+func TestNewBranchCommandCreatesBranchInDisplayedRepositories(t *testing.T) {
 	h := newTestHarness(t, 100, 30)
 	defer h.stop()
 
-	gitIn(t, h.dir, "init", "-q")
-	gitIn(t, h.dir, "commit", "--allow-empty", "-q", "-m", "initial")
-	h.app.Changes.Dirs = []string{h.dir}
+	workspaceRoot := filepath.Join(h.dir, "repos")
+	repoDirs := []string{
+		filepath.Join(workspaceRoot, "first"),
+		filepath.Join(workspaceRoot, "second"),
+	}
+	for _, dir := range repoDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		gitIn(t, dir, "init", "-q")
+		gitIn(t, dir, "commit", "--allow-empty", "-q", "-m", "initial")
+	}
+	plainDir := filepath.Join(workspaceRoot, "not-a-repo")
+	if err := os.MkdirAll(plainDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	h.app.Changes.SetDirs([]string{repoDirs[0], workspaceRoot, plainDir})
 
 	const branch = "feature/from-changes-panel"
 	h.exec("git.newBranch")
@@ -27,8 +43,10 @@ func TestNewBranchCommandCreatesBranch(t *testing.T) {
 	if result.Err != nil {
 		t.Fatalf("creating branch: %v", result.Err)
 	}
-	if got := git.BranchName(h.dir); got != branch {
-		t.Fatalf("current branch = %q, want %q", got, branch)
+	for _, dir := range repoDirs {
+		if got := git.BranchName(dir); got != branch {
+			t.Errorf("current branch in %q = %q, want %q", dir, got, branch)
+		}
 	}
 	h.assertContains("Created branch: " + branch)
 }

@@ -226,11 +226,30 @@ func (a *App) RefreshChanges() {
 }
 
 func (a *App) NewBranchDialog() {
+	groups := a.Changes.Groups()
+	dirs := make([]string, 0, len(groups))
+	seen := make(map[string]bool)
+	for _, group := range groups {
+		if group.IsPR {
+			continue
+		}
+		dir := git.RepoRoot(group.Dir)
+		if dir == "" || seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		dirs = append(dirs, dir)
+	}
+	if len(dirs) == 0 {
+		a.StatusWarn("No Git repositories in Changes panel")
+		return
+	}
+
 	a.ShowInputDialogEx("New Branch", "Branch name", "", "Create", func(name string) {
 		a.RunRepoTask(RepoTask{
 			Progress: "Creating branch",
 			Done:     "Created branch: " + name,
-			Dirs:     a.Changes.Dirs,
+			Dirs:     dirs,
 			Ops:      []RepoOp{OpCreateBranch(name)},
 		})
 	})
