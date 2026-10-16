@@ -55,6 +55,7 @@ type Diagnostic struct {
 type editorTab struct {
 	ID          string
 	FilePath    string
+	IconPath    string
 	Title       string
 	Buf         *buffer.Buffer
 	Cur         *cursor.Cursor
@@ -431,6 +432,7 @@ func (g *EditorGroupWidget) OpenFile(path string) {
 	folds.SetPending(func() []fold.Range { return fold.ComputeIndentRanges(newBuf.Lines) })
 	newTab := editorTab{
 		FilePath: path,
+		IconPath: path,
 		Buf:      newBuf,
 		Cur:      &cursor.Cursor{},
 		Vp:       &view.Viewport{},
@@ -585,6 +587,7 @@ func (g *EditorGroupWidget) openContentFileTab(path string, content Widget) {
 	g.applyImagePrefs(content)
 	newTab := editorTab{
 		FilePath: path,
+		IconPath: path,
 		Content:  content,
 		Preview:  true,
 	}
@@ -659,6 +662,7 @@ func (g *EditorGroupWidget) OpenDiffTab(tabName, title, path string, fd diff.Fil
 				closer.Close()
 			}
 			t.Content = widget
+			t.IconPath = path
 			t.Title = title
 			g.tabs[i] = t
 			g.SwitchTab(i)
@@ -667,6 +671,7 @@ func (g *EditorGroupWidget) OpenDiffTab(tabName, title, path string, fd diff.Fil
 	}
 	g.tabs = append(g.tabs, editorTab{
 		FilePath: tabName,
+		IconPath: path,
 		Title:    title,
 		Content:  widget,
 	})
@@ -696,6 +701,19 @@ func (g *EditorGroupWidget) ApplyDiffDefaults(surface DiffModeSurface) {
 	}
 	if m, ok := surface.(scrollMarkSurface); ok {
 		m.SetDiffScrollMarks(g.DiffScrollbarGitMarks, g.LegacyScrollbarGlyphs)
+	}
+}
+
+func (g *EditorGroupWidget) SetFileIconMode(mode string) {
+	g.TabBar.Icons = mode
+	for i := range g.tabs {
+		g.applyFileIconMode(g.tabs[i].Content)
+	}
+}
+
+func (g *EditorGroupWidget) applyFileIconMode(content Widget) {
+	if setter, ok := content.(interface{ SetFileIconMode(string) }); ok {
+		setter.SetFileIconMode(g.TabBar.Icons)
 	}
 }
 
@@ -833,10 +851,12 @@ func (g *EditorGroupWidget) SetImageRedraw(redraw func()) {
 }
 
 func (g *EditorGroupWidget) OpenPluginTab(id, title string, content Widget) {
+	g.applyFileIconMode(content)
 	for i, t := range g.tabs {
 		if t.FilePath == id {
 			g.notifyContentTabClose(t)
 			t.Content = content
+			t.IconPath = ""
 			t.Title = title
 			g.tabs[i] = t
 			g.SwitchTab(i)
@@ -1117,7 +1137,11 @@ func (g *EditorGroupWidget) DiffTabSources() []DiffSearchSource {
 	var result []DiffSearchSource
 	for _, t := range g.tabs {
 		if dv, ok := t.Content.(*DiffEditorWidget); ok {
-			result = append(result, DiffSearchSource{TabName: t.FilePath, Lines: dv.CombinedLines()})
+			iconPath := t.IconPath
+			if iconPath == "" {
+				iconPath = dv.FilePath
+			}
+			result = append(result, DiffSearchSource{TabName: t.FilePath, IconPath: iconPath, Lines: dv.CombinedLines()})
 		}
 	}
 	return result
@@ -1411,6 +1435,7 @@ func (g *EditorGroupWidget) SaveAs(path string) bool {
 	}
 	g.moveBookmarks(t.FilePath, path)
 	t.FilePath = path
+	t.IconPath = path
 	t.Virtual = false
 	t.Placeholder = false
 	if g.SyntaxHighlight {
@@ -1463,25 +1488,59 @@ func (g *EditorGroupWidget) RenamePath(oldPath, newPath string) bool {
 	}
 	g.moveBookmarks(oldPath, newPath)
 	prefix := oldPath + string(filepath.Separator)
+	remapPath := func(path string) (string, bool) {
+		switch {
+		case path == oldPath:
+			return newPath, true
+		case strings.HasPrefix(path, prefix):
+			return filepath.Join(newPath, strings.TrimPrefix(path, prefix)), true
+		default:
+			return "", false
+		}
+	}
 	renamed := false
 	for i := range g.tabs {
 		t := &g.tabs[i]
-		if t.Virtual || t.Content != nil || t.Buf == nil {
+		if t.Virtual {
 			continue
 		}
-		var updated string
-		switch {
-		case t.FilePath == oldPath:
-			updated = newPath
-		case strings.HasPrefix(t.FilePath, prefix):
-			updated = filepath.Join(newPath, strings.TrimPrefix(t.FilePath, prefix))
-		default:
+		if t.Content != nil {
+			oldIconPath := t.IconPath
+			updatedIconPath, ok := remapPath(oldIconPath)
+			if !ok {
+				continue
+			}
+			setter, ok := t.Content.(interface{ SetFilePath(string) })
+			if !ok {
+				continue
+			}
+			setter.SetFilePath(updatedIconPath)
+			t.IconPath = updatedIconPath
+			if updated, ok := remapPath(t.FilePath); ok {
+				t.FilePath = updated
+			} else if strings.HasPrefix(t.FilePath, oldIconPath+" (") {
+				t.FilePath = updatedIconPath + strings.TrimPrefix(t.FilePath, oldIconPath)
+			}
+			renamed = true
+			continue
+		}
+		if t.Buf == nil {
+			continue
+		}
+		updated, ok := remapPath(t.FilePath)
+		if !ok {
 			continue
 		}
 		if g.OnFileClose != nil && t.Highlighter != nil {
 			g.OnFileClose(t.FilePath, t.Highlighter.Language())
 		}
 		t.FilePath = updated
+		if t.Diff != nil {
+			t.Diff.SetFilePath(updated)
+		}
+		if t.IconPath != "" {
+			t.IconPath = updated
+		}
 		if g.SyntaxHighlight {
 			t.Highlighter = highlight.NewForLines(updated, t.Buf.Lines)
 		} else {
@@ -1577,6 +1636,7 @@ func (g *EditorGroupWidget) OpenFileReadOnly(path, title string) {
 	}
 	newTab := editorTab{
 		FilePath: path,
+		IconPath: path,
 		Title:    tabTitle,
 		Buf:      newBuf,
 		Cur:      &cursor.Cursor{},
@@ -1616,6 +1676,7 @@ func (g *EditorGroupWidget) OpenBufferReadOnly(title, filePath string, lines []s
 	folds.SetRanges(fold.ComputeIndentRanges(newBuf.Lines))
 	newTab := editorTab{
 		FilePath: filePath,
+		IconPath: filePath,
 		Title:    title,
 		Buf:      newBuf,
 		Cur:      &cursor.Cursor{},
@@ -2415,6 +2476,7 @@ func (g *EditorGroupWidget) syncTabs() {
 		uiTabs = append(uiTabs, Tab{
 			ID:       ts.ID,
 			Name:     name,
+			FilePath: ts.IconPath,
 			Active:   i == g.active,
 			Dirty:    dirty,
 			Closable: closable,
