@@ -28,7 +28,7 @@ func (a *App) OpenFind() {
 			a.StatusWarn("Invalid regex: " + err.Error())
 			return nil
 		}
-		a.EditorGroup.SetSearch(query, matches)
+		a.EditorGroup.SetFindSearch(query, matches, opts)
 		return matches
 	}
 	findBar.OnNavigate = func(match ui.FindMatch) {
@@ -40,7 +40,12 @@ func (a *App) OpenFind() {
 	}
 	findBar.OnDismiss = func() {
 		a.DismissDialog()
-		a.EditorGroup.ClearSearch()
+		a.EditorGroup.ClearFindHighlights()
+	}
+	findBar.OnEditorTabChange = func() {
+		findBar.Current = 0
+		findBar.Refresh()
+		a.EditorGroup.SetSearchActive(findBar.Current)
 	}
 	a.ShowFindBar(findBar)
 }
