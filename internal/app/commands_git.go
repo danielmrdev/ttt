@@ -225,6 +225,17 @@ func (a *App) RefreshChanges() {
 	a.Changes.Refresh()
 }
 
+func (a *App) NewBranchDialog() {
+	a.ShowInputDialogEx("New Branch", "Branch name", "", "Create", func(name string) {
+		a.RunRepoTask(RepoTask{
+			Progress: "Creating branch",
+			Done:     "Created branch: " + name,
+			Dirs:     a.Changes.Dirs,
+			Ops:      []RepoOp{OpCreateBranch(name)},
+		})
+	})
+}
+
 func registerGitCommands(app *App) {
 	reg := app.Reg
 
@@ -356,6 +367,12 @@ func registerGitCommands(app *App) {
 	registerGitCmd("git.pull", "Git: Pull", []string{"git", "fetch", "download"}, []RepoOp{OpPull}, "Pulling", "Pulled successfully")
 	registerGitCmd("git.push", "Git: Push", []string{"git", "upload", "publish"}, []RepoOp{OpPush}, "Pushing", "Pushed successfully")
 	registerGitCmd("git.sync", "Git: Sync", []string{"git", "fetch", "upload"}, []RepoOp{OpPull, OpPush}, "Syncing", "Synced successfully")
+	reg.Register(command.Command{
+		ID:       "git.newBranch",
+		Title:    "Git: New Branch",
+		Keywords: []string{"git", "branch", "create"},
+		Handler:  app.NewBranchDialog,
+	})
 
 	reg.Register(command.Command{
 		ID: "git.copyPermalink", Title: "Git: Copy GitHub Permalink",
