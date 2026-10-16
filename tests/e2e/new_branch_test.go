@@ -7,7 +7,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-func TestChangesPanelCreatesNewBranch(t *testing.T) {
+func TestNewBranchCommandCreatesBranch(t *testing.T) {
 	h := newTestHarness(t, 100, 30)
 	defer h.stop()
 
