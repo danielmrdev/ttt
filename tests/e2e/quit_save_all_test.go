@@ -59,10 +59,16 @@ func TestMouseQuitConfirmationRunsOnRelease(t *testing.T) {
 	if !ok {
 		t.Fatalf("dialog footer = %T, want HStackWidget", children[len(children)-1])
 	}
-	buttons := footer.WidgetChildren()
-	quit, ok := buttons[1].(*widgets.ButtonWidget)
-	if !ok {
-		t.Fatalf("Quit button = %T, want ButtonWidget", buttons[1])
+	var quit *widgets.ButtonWidget
+	for _, child := range footer.WidgetChildren() {
+		button, ok := child.(*widgets.ButtonWidget)
+		if ok && strings.TrimPrefix(button.Config.Label, "&") == "Quit" {
+			quit = button
+			break
+		}
+	}
+	if quit == nil {
+		t.Fatal("quit confirmation does not contain a Quit button")
 	}
 	r := quit.GetRect()
 	x, y := r.X+r.W/2, r.Y
