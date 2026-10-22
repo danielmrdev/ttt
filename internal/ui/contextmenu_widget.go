@@ -28,22 +28,23 @@ func MenuSep() ContextMenuItem {
 
 type ContextMenuWidget struct {
 	BaseWidget
-	Items          []ContextMenuItem
-	Selected       int
-	AnchorX        int
-	AnchorY        int
-	Borders        *term.BorderSet
-	OnExec         func(command string)
-	OnDismiss      func()
-	OnNavigate     func(dir int)
-	OnMouseOutside func(ev tcell.Event)
-	Icons          string
-	Submenu        *ContextMenuWidget
-	parent         *ContextMenuWidget
-	submenuIndex   int
-	firstEvent     bool
-	pressedMenu    *ContextMenuWidget
-	pressedItem    int
+	Items            []ContextMenuItem
+	Selected         int
+	AnchorX          int
+	AnchorY          int
+	Borders          *term.BorderSet
+	OnExec           func(command string)
+	OnDismiss        func()
+	OnNavigate       func(dir int)
+	OnMouseOutside   func(ev tcell.Event)
+	Icons            string
+	Submenu          *ContextMenuWidget
+	parent           *ContextMenuWidget
+	submenuIndex     int
+	firstEvent       bool
+	mouseButton1Down bool
+	pressedMenu      *ContextMenuWidget
+	pressedItem      int
 }
 
 func NewContextMenuWidget(items []ContextMenuItem, x, y int) *ContextMenuWidget {
@@ -265,6 +266,8 @@ func (c *ContextMenuWidget) HandleEvent(ev tcell.Event) EventResult {
 		}
 	case *tcell.EventMouse:
 		btn := tev.Buttons()
+		button1WasDown := c.mouseButton1Down
+		c.mouseButton1Down = btn&tcell.Button1 != 0
 		mx, my := tev.Position()
 		if c.firstEvent {
 			c.firstEvent = false
@@ -273,6 +276,9 @@ func (c *ContextMenuWidget) HandleEvent(ev tcell.Event) EventResult {
 
 		menu := c.menuAt(mx, my)
 		if btn&tcell.Button1 != 0 {
+			if button1WasDown {
+				return EventConsumed
+			}
 			if menu == nil {
 				c.pressedMenu = nil
 				c.pressedItem = -1

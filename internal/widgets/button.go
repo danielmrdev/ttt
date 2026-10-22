@@ -28,6 +28,7 @@ type ButtonWidget struct {
 	accelRune                 rune
 	focused                   bool
 	pressed                   bool
+	mouseButton1Down          bool
 	pointerCaptureInvalidated func()
 }
 
@@ -141,9 +142,19 @@ func (b *ButtonWidget) HandleEvent(ev tcell.Event) EventResult {
 		mx, my := e.Position()
 		r := b.GetRect()
 		inside := mx >= r.X && mx < r.X+r.W && my >= r.Y && my < r.Y+r.H
-		if e.Buttons()&tcell.Button1 != 0 && inside {
-			b.pressed = true
-			return EventCaptured
+		button1WasDown := b.mouseButton1Down
+		b.mouseButton1Down = e.Buttons()&tcell.Button1 != 0
+		if e.Buttons()&tcell.Button1 != 0 {
+			if button1WasDown {
+				if b.pressed {
+					return EventCaptured
+				}
+				return EventIgnored
+			}
+			if inside {
+				b.pressed = true
+				return EventCaptured
+			}
 		}
 		if e.Buttons() == tcell.ButtonNone && b.pressed {
 			b.pressed = false

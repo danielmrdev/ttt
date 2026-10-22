@@ -49,6 +49,7 @@ type Root struct {
 	EscapeDismissers []func() bool
 	EscapeFallback   func()
 	capturedWidget   Widget
+	mouseButtons     tcell.ButtonMask
 }
 
 func NewRoot(main Widget) *Root {
@@ -184,6 +185,17 @@ func (r *Root) rawKeysFocused() bool {
 }
 
 func (r *Root) HandleEvent(ev tcell.Event) EventResult {
+	if mouse, ok := ev.(*tcell.EventMouse); ok {
+		buttons := mouse.Buttons()
+		button1WasDown := r.mouseButtons&tcell.Button1 != 0
+		r.mouseButtons = buttons
+		r.reconcilePointerCapture()
+		// Without capture, held motion must not retarget a press to a widget entered by dragging.
+		if buttons&tcell.Button1 != 0 && button1WasDown && r.capturedWidget == nil {
+			return EventConsumed
+		}
+	}
+
 	kev, isKey := ev.(*tcell.EventKey)
 	// ForceKeys punch through two things that would otherwise swallow them: a
 	// raw key consumer, and an overlay (a second ctrl+q force-quits past the

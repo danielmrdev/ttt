@@ -102,6 +102,22 @@ func TestButtonClickFiresOnClick(t *testing.T) {
 	}
 }
 
+func TestButtonDraggingInDoesNotActivate(t *testing.T) {
+	clicked := false
+	btn := NewButtonWidget(ButtonConfig{
+		Label:   "Button",
+		OnClick: func() { clicked = true },
+	})
+	renderWidget(btn, 5, 3, 20, 1)
+
+	btn.HandleEvent(mousePress(4, 3))
+	btn.HandleEvent(mousePress(6, 3))
+	btn.HandleEvent(mouseRelease(6, 3))
+	if clicked {
+		t.Fatal("dragging into button activated without a press originating inside it")
+	}
+}
+
 func TestButtonClickOutsideBounds(t *testing.T) {
 	clicked := false
 	btn := NewButtonWidget(ButtonConfig{

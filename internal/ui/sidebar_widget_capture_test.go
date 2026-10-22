@@ -143,9 +143,10 @@ func TestSidebarTabPressAfterCanceledCaptureReachesTabs(t *testing.T) {
 		t.Fatal("tab press did not start a gesture")
 	}
 
-	// PushOverlay cancels pointer capture across the whole tree; the sidebar's
-	// stale button state must not swallow the next press.
+	// PushOverlay cancels pointer capture, but the physical press remains held
+	// until its release arrives.
 	root.CancelPointerCapture()
+	root.HandleEvent(tcell.NewEventMouse(2, 0, tcell.ButtonNone, 0))
 
 	press()
 	if !sidebar.Tabs.PointerGestureActive() {

@@ -37,6 +37,26 @@ type passThroughWidget struct {
 	eventCount int
 }
 
+type mouseDownConsumer struct {
+	BaseWidget
+}
+
+func (m *mouseDownConsumer) Height() int    { return 1 }
+func (m *mouseDownConsumer) Width() int     { return 0 }
+func (m *mouseDownConsumer) Render(Surface) {}
+func (m *mouseDownConsumer) HandleEvent(ev tcell.Event) EventResult {
+	mouse, ok := ev.(*tcell.EventMouse)
+	if !ok || mouse.Buttons()&tcell.Button1 == 0 {
+		return EventIgnored
+	}
+	x, y := mouse.Position()
+	r := m.GetRect()
+	if x >= r.X && x < r.X+r.W && y >= r.Y && y < r.Y+r.H {
+		return EventConsumed
+	}
+	return EventIgnored
+}
+
 func (m *passThroughWidget) HandleEvent(ev tcell.Event) EventResult {
 	m.eventCount++
 	return EventIgnored
@@ -65,6 +85,26 @@ func TestRootRoutesToFocused(t *testing.T) {
 	}
 	if main.eventCount != 0 {
 		t.Fatal("event incorrectly routed to main widget")
+	}
+}
+
+func TestRootDoesNotRetargetUncapturedMouseDrag(t *testing.T) {
+	clicked := false
+	button := widgets.NewButtonWidget(widgets.ButtonConfig{
+		Label:   "Quit",
+		OnClick: func() { clicked = true },
+	})
+	buttonAdapter := NewWidgetAdapter(widgets.NewVStackWidget(button))
+	root := NewRoot(widgets.NewVStackWidget(&mouseDownConsumer{}, buttonAdapter))
+	root.SetSize(20, 2)
+	root.Render(makeGrid(20, 2))
+
+	r := button.GetRect()
+	root.HandleEvent(tcell.NewEventMouse(1, 0, tcell.Button1, 0))
+	root.HandleEvent(tcell.NewEventMouse(r.X+1, r.Y, tcell.Button1, 0))
+	root.HandleEvent(tcell.NewEventMouse(r.X+1, r.Y, tcell.ButtonNone, 0))
+	if clicked {
+		t.Fatal("dragging into button activated without a press originating inside it")
 	}
 }
 

@@ -94,6 +94,25 @@ func TestContextMenuSelectionStillSkipsSeparatorsAndExecutes(t *testing.T) {
 	}
 }
 
+func TestContextMenuDragDoesNotRetargetPressedItem(t *testing.T) {
+	var commands []string
+	menu := NewContextMenuWidget([]ContextMenuItem{
+		{Label: "First", Command: "first"},
+		{Label: "Second", Command: "second"},
+	}, 2, 1)
+	menu.OnExec = func(command string) { commands = append(commands, command) }
+	renderContextMenu(menu, 40, 10)
+	readyContextMenuForInput(menu)
+
+	r := menu.GetRect()
+	menu.HandleEvent(tcell.NewEventMouse(r.X+2, r.Y+1, tcell.Button1, tcell.ModNone))
+	menu.HandleEvent(tcell.NewEventMouse(r.X+2, r.Y+2, tcell.Button1, tcell.ModNone))
+	menu.HandleEvent(tcell.NewEventMouse(r.X+2, r.Y+2, tcell.ButtonNone, tcell.ModNone))
+	if len(commands) != 0 {
+		t.Fatalf("dragging from First to Second executed commands: %v", commands)
+	}
+}
+
 func TestContextMenuMixedFullwidthLabelsKeepExactMouseBounds(t *testing.T) {
 	var commands []string
 	menu := NewContextMenuWidget([]ContextMenuItem{
