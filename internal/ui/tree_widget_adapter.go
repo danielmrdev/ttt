@@ -11,6 +11,7 @@ type WidgetAdapter struct {
 	focus                     *widgets.FocusManager
 	popups                    []widgets.PopupRenderer
 	capturedWidget            widgets.Widget
+	mouseButtons              tcell.ButtonMask
 	pointerCaptureInvalidated func()
 	cancelingPointerCapture   bool
 }
@@ -153,12 +154,21 @@ func (a *WidgetAdapter) CursorPosition() (int, int, bool) {
 }
 
 func (a *WidgetAdapter) HandleEvent(ev tcell.Event) EventResult {
-	if tev, ok := ev.(*tcell.EventMouse); ok && a.capturedWidget != nil {
-		result := a.capturedWidget.HandleEvent(ev)
-		if tev.Buttons() == tcell.ButtonNone {
-			a.capturedWidget = nil
+	if tev, ok := ev.(*tcell.EventMouse); ok {
+		buttons := tev.Buttons()
+		button1WasDown := a.mouseButtons&tcell.Button1 != 0
+		a.mouseButtons = buttons
+		if a.capturedWidget != nil {
+			result := a.capturedWidget.HandleEvent(ev)
+			if buttons == tcell.ButtonNone {
+				a.capturedWidget = nil
+			}
+			return result
 		}
-		return result
+		// Without capture, held motion must not become a fresh press on another widget.
+		if buttons&tcell.Button1 != 0 && button1WasDown {
+			return EventConsumed
+		}
 	}
 	// Popups are painted over the tree, so they must claim clicks over the rows
 	// they cover before those rows get a chance at them.

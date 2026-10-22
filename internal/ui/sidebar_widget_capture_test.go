@@ -56,8 +56,8 @@ func TestSidebarCancelStopsTreeScrollbarDrag(t *testing.T) {
 	if invalidations != 1 {
 		t.Fatalf("nested capture invalidations = %d, want 1", invalidations)
 	}
-	if got := sidebar.HandleEvent(tcell.NewEventMouse(30, 30, tcell.Button1, 0)); got != EventIgnored {
-		t.Fatalf("post-cancel out-of-bounds drag result = %v, want ignored", got)
+	if got := sidebar.HandleEvent(tcell.NewEventMouse(30, 30, tcell.Button1, 0)); got != EventConsumed {
+		t.Fatalf("post-cancel out-of-bounds drag result = %v, want consumed", got)
 	}
 }
 
