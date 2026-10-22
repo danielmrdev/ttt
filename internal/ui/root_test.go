@@ -88,6 +88,39 @@ func TestRootRoutesToFocused(t *testing.T) {
 	}
 }
 
+func TestRootPreservesModalOverlayCaptureAcrossDrag(t *testing.T) {
+	probe := &adapterCaptureProbe{height: 2}
+	overlay := NewWidgetAdapter(probe)
+	root := NewRoot(&passThroughWidget{})
+	root.SetSize(10, 4)
+	root.PushOverlay(Overlay{Widget: overlay, Modal: true})
+	root.Render(makeGrid(10, 4))
+
+	if got := root.HandleEvent(tcell.NewEventMouse(1, 1, tcell.Button1, 0)); got != EventConsumed {
+		t.Fatalf("overlay press result = %v, want consumed", got)
+	}
+	if root.capturedWidget != overlay {
+		t.Fatalf("root captured %T, want modal overlay", root.capturedWidget)
+	}
+	if got := root.HandleEvent(tcell.NewEventMouse(8, 3, tcell.Button1, 0)); got != EventConsumed {
+		t.Fatalf("overlay drag result = %v, want consumed", got)
+	}
+	if probe.heldEvents != 1 {
+		t.Fatalf("overlay received %d held events, want 1", probe.heldEvents)
+	}
+
+	root.HandleEvent(tcell.NewEventMouse(8, 3, tcell.ButtonNone, 0))
+	if root.capturedWidget != nil || probe.capturing {
+		t.Fatal("overlay release retained pointer capture")
+	}
+
+	root.HandleEvent(tcell.NewEventMouse(1, 1, tcell.Button1, 0))
+	if !root.CancelPointerCapture() || root.capturedWidget != nil || probe.capturing {
+		t.Fatal("Root did not cancel the modal overlay capture")
+	}
+	root.HandleEvent(tcell.NewEventMouse(1, 1, tcell.ButtonNone, 0))
+}
+
 func TestRootDoesNotRetargetUncapturedMouseDrag(t *testing.T) {
 	clicked := false
 	button := widgets.NewButtonWidget(widgets.ButtonConfig{
