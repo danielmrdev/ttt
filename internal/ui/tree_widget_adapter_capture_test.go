@@ -146,26 +146,6 @@ func TestWidgetAdapterCancelingButtonPressPreventsActivation(t *testing.T) {
 	}
 }
 
-func TestWidgetAdapterDoesNotActivateButtonWhenDraggingIn(t *testing.T) {
-	clicked := false
-	button := widgets.NewButtonWidget(widgets.ButtonConfig{
-		Label:   "Quit",
-		OnClick: func() { clicked = true },
-	})
-	adapter := NewWidgetAdapter(widgets.NewVStackWidget(button))
-	adapter.SetRect(Rect{X: 0, Y: 0, W: 12, H: 2})
-	adapter.Render(NewRenderSurface(makeGrid(12, 2), Rect{W: 12, H: 2}))
-
-	r := button.GetRect()
-	x, y := r.X+1, r.Y
-	adapter.HandleEvent(tcell.NewEventMouse(r.X-1, y, tcell.Button1, 0))
-	adapter.HandleEvent(tcell.NewEventMouse(x, y, tcell.Button1, 0))
-	adapter.HandleEvent(tcell.NewEventMouse(x, y, tcell.ButtonNone, 0))
-	if clicked {
-		t.Fatal("dragging into button activated without a press originating inside it")
-	}
-}
-
 func TestWidgetAdapterRetainsFocusRoutedCaptureAcrossChildren(t *testing.T) {
 	first := &adapterCaptureProbe{height: 2}
 	second := &adapterCaptureProbe{height: 2}

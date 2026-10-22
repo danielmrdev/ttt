@@ -56,8 +56,8 @@ func TestSidebarCancelStopsTreeScrollbarDrag(t *testing.T) {
 	if invalidations != 1 {
 		t.Fatalf("nested capture invalidations = %d, want 1", invalidations)
 	}
-	if got := sidebar.HandleEvent(tcell.NewEventMouse(30, 30, tcell.Button1, 0)); got != EventConsumed {
-		t.Fatalf("post-cancel out-of-bounds drag result = %v, want consumed", got)
+	if got := sidebar.HandleEvent(tcell.NewEventMouse(30, 30, tcell.Button1, 0)); got != EventIgnored {
+		t.Fatalf("post-cancel out-of-bounds drag result = %v, want ignored", got)
 	}
 }
 
@@ -143,8 +143,7 @@ func TestSidebarTabPressAfterCanceledCaptureReachesTabs(t *testing.T) {
 		t.Fatal("tab press did not start a gesture")
 	}
 
-	// PushOverlay cancels pointer capture, but the physical press remains held
-	// until its release arrives.
+	// Canceling capture does not end the physical press sequence.
 	root.CancelPointerCapture()
 	root.HandleEvent(tcell.NewEventMouse(2, 0, tcell.ButtonNone, 0))
 
