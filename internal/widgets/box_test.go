@@ -271,7 +271,7 @@ func TestBoxHandleEventDelegatesToChild(t *testing.T) {
 
 	// Press and release inside the button (which is inside the box).
 	r := btn.GetRect()
-	result := box.HandleEvent(mouseClick(r.X+1, r.Y))
+	result := box.HandleEvent(mousePress(r.X+1, r.Y))
 	if result != EventCaptured {
 		t.Errorf("box press result = %v, want captured child", result)
 	}

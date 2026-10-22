@@ -95,7 +95,7 @@ func TestButtonClickInside(t *testing.T) {
 	renderWidget(btn, 5, 5, 10, 1)
 
 	// Mouse-down arms the button; release activates it.
-	result := btn.HandleEvent(mouseClick(6, 5))
+	result := btn.HandleEvent(mousePress(6, 5))
 	if result != EventCaptured {
 		t.Errorf("mouse-down result = %v, want captured", result)
 	}

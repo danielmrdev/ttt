@@ -606,7 +606,7 @@ func TestDialogMouseClickOnFooterButton(t *testing.T) {
 	}
 
 	// An immediate mouse-up after the press triggers the button handler.
-	d.HandleEvent(mouseClick(r.X+1, r.Y))
+	d.HandleEvent(mousePress(r.X+1, r.Y))
 	if clicked {
 		t.Fatal("mouse-down triggered the button handler")
 	}

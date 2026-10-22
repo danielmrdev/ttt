@@ -21,13 +21,14 @@ type ButtonConfig struct {
 
 type ButtonWidget struct {
 	BaseWidget
-	Config     ButtonConfig
-	Disabled   bool
-	label      string
-	accelIndex int
-	accelRune  rune
-	focused    bool
-	pressed    bool
+	Config                    ButtonConfig
+	Disabled                  bool
+	label                     string
+	accelIndex                int
+	accelRune                 rune
+	focused                   bool
+	pressed                   bool
+	pointerCaptureInvalidated func()
 }
 
 func NewButtonWidget(config ButtonConfig) *ButtonWidget {
@@ -67,8 +68,23 @@ func (b *ButtonWidget) Focusable() bool { return true }
 func (b *ButtonWidget) SetFocused(f bool) {
 	b.focused = f
 	if !f {
-		b.pressed = false
+		b.CancelPointerCapture()
 	}
+}
+
+func (b *ButtonWidget) CancelPointerCapture() bool {
+	if !b.pressed {
+		return false
+	}
+	b.pressed = false
+	if b.pointerCaptureInvalidated != nil {
+		b.pointerCaptureInvalidated()
+	}
+	return true
+}
+
+func (b *ButtonWidget) SetPointerCaptureInvalidated(invalidated func()) {
+	b.pointerCaptureInvalidated = invalidated
 }
 func (b *ButtonWidget) IsFocused() bool { return b.focused }
 

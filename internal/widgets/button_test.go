@@ -86,7 +86,7 @@ func TestButtonClickFiresOnClick(t *testing.T) {
 	renderWidget(btn, 5, 3, 20, 1)
 
 	// Mouse-down arms the button; an immediate release activates it.
-	result := btn.HandleEvent(mouseClick(6, 3))
+	result := btn.HandleEvent(mousePress(6, 3))
 	if result != EventCaptured {
 		t.Errorf("mouse-down result = %v, want captured", result)
 	}
@@ -129,7 +129,7 @@ func TestButtonReleaseOutsideDoesNotActivate(t *testing.T) {
 	})
 	renderWidget(btn, 5, 3, 20, 1)
 
-	btn.HandleEvent(mouseClick(6, 3))
+	btn.HandleEvent(mousePress(6, 3))
 	btn.HandleEvent(mouseRelease(0, 0))
 	if clicked {
 		t.Error("mouse-up outside button should not activate it")
