@@ -74,6 +74,7 @@ func (b *ButtonWidget) SetFocused(f bool) {
 }
 
 func (b *ButtonWidget) CancelPointerCapture() bool {
+	b.mouseButton1Down = false
 	if !b.pressed {
 		return false
 	}

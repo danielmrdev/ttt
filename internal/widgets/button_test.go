@@ -118,6 +118,26 @@ func TestButtonDraggingInDoesNotActivate(t *testing.T) {
 	}
 }
 
+func TestButtonCanClickAgainAfterCanceledPress(t *testing.T) {
+	clicked := false
+	btn := NewButtonWidget(ButtonConfig{
+		Label:   "Button",
+		OnClick: func() { clicked = true },
+	})
+	renderWidget(btn, 5, 3, 20, 1)
+
+	btn.HandleEvent(mousePress(6, 3))
+	if !btn.CancelPointerCapture() {
+		t.Fatal("button did not cancel the active press")
+	}
+	// The canceled press's release may be routed elsewhere.
+	btn.HandleEvent(mousePress(6, 3))
+	btn.HandleEvent(mouseRelease(6, 3))
+	if !clicked {
+		t.Fatal("button did not activate on the new press and release")
+	}
+}
+
 func TestButtonClickOutsideBounds(t *testing.T) {
 	clicked := false
 	btn := NewButtonWidget(ButtonConfig{
