@@ -27,6 +27,7 @@ type ButtonWidget struct {
 	accelIndex int
 	accelRune  rune
 	focused    bool
+	pressed    bool
 }
 
 func NewButtonWidget(config ButtonConfig) *ButtonWidget {
@@ -62,9 +63,14 @@ func (b *ButtonWidget) Width() int {
 	return w
 }
 
-func (b *ButtonWidget) Focusable() bool   { return true }
-func (b *ButtonWidget) SetFocused(f bool) { b.focused = f }
-func (b *ButtonWidget) IsFocused() bool   { return b.focused }
+func (b *ButtonWidget) Focusable() bool { return true }
+func (b *ButtonWidget) SetFocused(f bool) {
+	b.focused = f
+	if !f {
+		b.pressed = false
+	}
+}
+func (b *ButtonWidget) IsFocused() bool { return b.focused }
 
 func (b *ButtonWidget) Render(surface Surface) {
 	style := b.Config.Style
@@ -116,13 +122,19 @@ func (b *ButtonWidget) Render(surface Surface) {
 func (b *ButtonWidget) HandleEvent(ev tcell.Event) EventResult {
 	switch e := ev.(type) {
 	case *tcell.EventMouse:
-		if e.Buttons()&tcell.Button1 != 0 {
-			mx, my := e.Position()
-			r := b.GetRect()
-			if mx >= r.X && mx < r.X+r.W && my >= r.Y && my < r.Y+r.H {
+		mx, my := e.Position()
+		r := b.GetRect()
+		inside := mx >= r.X && mx < r.X+r.W && my >= r.Y && my < r.Y+r.H
+		if e.Buttons()&tcell.Button1 != 0 && inside {
+			b.pressed = true
+			return EventCaptured
+		}
+		if e.Buttons() == tcell.ButtonNone && b.pressed {
+			b.pressed = false
+			if inside {
 				b.trigger()
-				return EventConsumed
 			}
+			return EventConsumed
 		}
 	case *tcell.EventKey:
 		if b.focused {

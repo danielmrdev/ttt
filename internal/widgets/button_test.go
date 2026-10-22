@@ -85,14 +85,20 @@ func TestButtonClickFiresOnClick(t *testing.T) {
 	})
 	renderWidget(btn, 5, 3, 20, 1)
 
-	// Click inside the button rect
-	ev := mouseClick(6, 3)
-	result := btn.HandleEvent(ev)
+	// Mouse-down arms the button; an immediate release activates it.
+	result := btn.HandleEvent(mouseClick(6, 3))
+	if result != EventCaptured {
+		t.Errorf("mouse-down result = %v, want captured", result)
+	}
+	if clicked {
+		t.Fatal("OnClick ran before mouse-up")
+	}
+	result = btn.HandleEvent(mouseRelease(6, 3))
 	if result != EventConsumed {
-		t.Error("click inside button should be consumed")
+		t.Errorf("mouse-up result = %v, want consumed", result)
 	}
 	if !clicked {
-		t.Error("OnClick should have been called")
+		t.Error("OnClick should run on mouse-up")
 	}
 }
 
@@ -112,6 +118,21 @@ func TestButtonClickOutsideBounds(t *testing.T) {
 	}
 	if clicked {
 		t.Error("OnClick should not be called for click outside bounds")
+	}
+}
+
+func TestButtonReleaseOutsideDoesNotActivate(t *testing.T) {
+	clicked := false
+	btn := NewButtonWidget(ButtonConfig{
+		Label:   "Button",
+		OnClick: func() { clicked = true },
+	})
+	renderWidget(btn, 5, 3, 20, 1)
+
+	btn.HandleEvent(mouseClick(6, 3))
+	btn.HandleEvent(mouseRelease(0, 0))
+	if clicked {
+		t.Error("mouse-up outside button should not activate it")
 	}
 }
 

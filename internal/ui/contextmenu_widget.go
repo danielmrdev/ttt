@@ -42,6 +42,8 @@ type ContextMenuWidget struct {
 	parent         *ContextMenuWidget
 	submenuIndex   int
 	firstEvent     bool
+	pressedMenu    *ContextMenuWidget
+	pressedItem    int
 }
 
 func NewContextMenuWidget(items []ContextMenuItem, x, y int) *ContextMenuWidget {
@@ -53,11 +55,12 @@ func NewContextMenuWidget(items []ContextMenuItem, x, y int) *ContextMenuWidget 
 		}
 	}
 	return &ContextMenuWidget{
-		Items:      items,
-		Selected:   sel,
-		AnchorX:    x,
-		AnchorY:    y,
-		firstEvent: true,
+		Items:       items,
+		Selected:    sel,
+		AnchorX:     x,
+		AnchorY:     y,
+		firstEvent:  true,
+		pressedItem: -1,
 	}
 }
 
@@ -271,25 +274,41 @@ func (c *ContextMenuWidget) HandleEvent(ev tcell.Event) EventResult {
 		menu := c.menuAt(mx, my)
 		if btn&tcell.Button1 != 0 {
 			if menu == nil {
+				c.pressedMenu = nil
+				c.pressedItem = -1
 				if c.OnDismiss != nil {
 					c.OnDismiss()
 				}
 				return EventConsumed
 			}
 			itemIdx := my - menu.GetRect().Y - 1
+			c.pressedMenu = nil
+			c.pressedItem = -1
 			if itemIdx >= 0 && itemIdx < len(menu.Items) && !menu.Items[itemIdx].IsSep {
 				menu.selectItem(itemIdx)
-				if menu.openSelectedSubmenu() {
-					return EventConsumed
-				}
-				if c.OnExec != nil && menu.Items[menu.Selected].Command != "" {
-					c.OnExec(menu.Items[menu.Selected].Command)
-				}
+				c.pressedMenu = menu
+				c.pressedItem = itemIdx
 			}
 			return EventConsumed
 		}
 
 		if btn == tcell.ButtonNone {
+			if c.pressedMenu != nil {
+				pressedMenu, pressedItem := c.pressedMenu, c.pressedItem
+				c.pressedMenu = nil
+				c.pressedItem = -1
+				itemIdx := -1
+				if menu == pressedMenu {
+					itemIdx = my - menu.GetRect().Y - 1
+				}
+				if itemIdx == pressedItem {
+					menu.selectItem(itemIdx)
+					if !menu.openSelectedSubmenu() && c.OnExec != nil && menu.Items[itemIdx].Command != "" {
+						c.OnExec(menu.Items[itemIdx].Command)
+					}
+				}
+				return EventConsumed
+			}
 			if menu == nil {
 				c.Selected = -1
 				if c.OnMouseOutside != nil {

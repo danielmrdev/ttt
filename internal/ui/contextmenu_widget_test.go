@@ -76,6 +76,10 @@ func TestContextMenuSelectionStillSkipsSeparatorsAndExecutes(t *testing.T) {
 	renderContextMenu(menu, 40, 10)
 	menu.HandleEvent(tcell.NewEventMouse(6, 4, tcell.ButtonNone, tcell.ModNone))
 	menu.HandleEvent(tcell.NewEventMouse(6, 4, tcell.Button1, tcell.ModNone))
+	if len(commands) != 1 {
+		t.Fatalf("mouse-down executed command: %v", commands)
+	}
+	menu.HandleEvent(tcell.NewEventMouse(6, 4, tcell.ButtonNone, tcell.ModNone))
 	if len(commands) != 2 || commands[1] != "first" {
 		t.Fatalf("mouse commands = %v, want second then first", commands)
 	}
@@ -97,6 +101,10 @@ func TestContextMenuMixedFullwidthLabelsKeepExactMouseBounds(t *testing.T) {
 
 	menu.HandleEvent(tcell.NewEventMouse(r.X+r.W-1, r.Y+2, tcell.ButtonNone, tcell.ModNone))
 	menu.HandleEvent(tcell.NewEventMouse(r.X+r.W-1, r.Y+2, tcell.Button1, tcell.ModNone))
+	if len(commands) != 0 {
+		t.Fatalf("mouse-down executed command: %v", commands)
+	}
+	menu.HandleEvent(tcell.NewEventMouse(r.X+r.W-1, r.Y+2, tcell.ButtonNone, tcell.ModNone))
 	if len(commands) != 1 || commands[0] != "second" {
 		t.Fatalf("right-edge command = %v, want [second]", commands)
 	}
@@ -194,6 +202,10 @@ func TestContextMenuFullwidthSubmenuFlipsAndKeepsMouseBounds(t *testing.T) {
 	}
 
 	menu.HandleEvent(tcell.NewEventMouse(child.X+child.W-1, child.Y+2, tcell.Button1, tcell.ModNone))
+	if executed != "" {
+		t.Fatalf("mouse-down executed submenu command %q", executed)
+	}
+	menu.HandleEvent(tcell.NewEventMouse(child.X+child.W-1, child.Y+2, tcell.ButtonNone, tcell.ModNone))
 	if executed != "unified" {
 		t.Fatalf("right-edge submenu command = %q, want unified", executed)
 	}
